@@ -3,3 +3,4 @@ venv
 .DS_Store
 .idea
 .grunt
+.ipynb_checkpoints
