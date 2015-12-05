@@ -36,7 +36,7 @@ urlpatterns += patterns('',
     # one homepage pattern, so if you use a different one, comment this
     # one out.
 
-    url("^$", direct_to_template, {"template": "index.html"}, name="home"),
+    url("^$", direct_to_template, {"template": "news/index.html"}, name="home"),
 
     # HOMEPAGE AS AN EDITABLE PAGE IN THE PAGE TREE
     # ---------------------------------------------
@@ -63,6 +63,7 @@ urlpatterns += patterns('',
 
     # url("^$", "mezzanine.blog.views.blog_post_list", name="home"),
 
+    ("^news/", include("news.urls")),
     # MEZZANINE'S URLS
     # ----------------
     # ADD YOUR OWN URLPATTERNS *ABOVE* THE LINE BELOW.

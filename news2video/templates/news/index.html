@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+{% load pages_tags mezzanine_tags i18n future staticfiles %}
+<html prefix="og: http://ogp.me/ns#" xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh" lang="zh">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>news2vid Prototype - Initium Media</title>
+	<meta name="keywords" content="端,端傳媒,Initium,Initium Media,">
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+	<meta name="format-detection" content="telephone=no">
+	<link rel="shortcut icon" href="{% static "favicon.png" %}">
+	<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto+Slab">
+	<link rel="stylesheet" type="text/css" href="{% static "style.css" %}">
+	<script src="{% static "jquery-2.1.1.min.js" %}"></script>
+	<script>
+	$(function() {
+	    $("#options").on("click", function() {
+			if ($(".panel").hasClass("invisible")) {
+	        	$(".panel").removeClass("invisible");
+	        } else {
+				$(".panel").addClass("invisible");
+	        }
+	    });
+
+        $("#convert").submit(function(e) {
+          hiddenAllBtn();
+          $('.convert .loading').removeClass('hidden');
+          var postData = $("#convert").serialize();
+          $.ajax({
+            type:"POST",
+            url: "{% url "news-convert" %}",
+            data: postData,
+            success: function(data) {
+              hiddenAllBtn();
+              $('.convert .done').removeClass('hidden');
+              enableDownload(data.video_url);
+              {# $('#video #mp4_src').attr('src', data.video_url); #}
+              {# $('#video')[0].load(); #}
+            },
+            error: function() {
+              alert("Error handling here");
+            }
+          });
+          e.preventDefault();
+          return false; 
+        });
+
+        function hiddenAllBtn() {
+          $('.convert .normal').addClass('hidden')
+          $('.convert .loading').addClass('hidden')
+          $('.convert .done').addClass('hidden')
+        }
+
+        function enableDownload(videoUrl) {
+           $('.convert').on('click', function(e) {
+            e.preventDefault();  //stop the browser from following
+            window.location.href = videoUrl; 
+           });
+        }
+	});
+	</script>
+</head>
+
+<body>
+
+<div id="wrapper">
+
+	<header class="pinned">
+		<a class="logo" href="https://theinitium.com" target="_blank" title="端傳媒 | Initium Media">
+			<img src="{% static "logo.svg" %}" alt="端傳媒 | Initium Media" />
+		</a>
+		<ul class="menu">
+			<li class="current"><a href="#">Converter</a></li>
+			<li><a href="#about">About</a></li>
+		</ul>
+	</header><!-- END header -->
+	
+	<div id="main">
+
+		<div class="url-container">
+      <form id="convert">{% csrf_token %}
+			<label for="url"><strong>Please enter URL:</strong></label>
+			<input type="url" name="url" id="url" placeholder="http://" class="url-box">
+			<div class="pref">
+				<span class="digest">
+					<input type="radio" checked="checked" name="length" value="digest">
+					<label for="digest">Digest</label>
+				</span>
+				<span class="full">
+					<input type="radio" name="length" value="full">
+					<label for="full">Full Story</label>
+				</span>
+			</div>
+			<button class="convert">
+				<span class="normal">GO</span>
+				<!-- BUTTON STATUS -->
+        <span class="loading hidden"><img src="{% static "loading.svg" %}"></span>
+        <span class="done hidden"><img src="{% static "download.svg" %}"></span>
+			</button>
+			<div class="panel invisible">
+				<div class="option format">
+					<h3><span>Format</span></h3>
+					<input type="radio" checked="checked" name="format" value="mp4">
+					<label for="mp4">MP4</label>  
+					<br/>
+					<input type="radio" name="format" value="mkv" disabled>
+					<label for="mkv" class="disabled">MKV</label>
+					<br/>
+					<input type="radio" name="format" value="avi" disabled>
+					<label for="avi" class="disabled">AVI</label>
+				</div>
+				<div class="option quality">
+					<h3><span>Quality</span></h3>
+					<input type="radio" checked="checked" name="quality" value="sd">
+					<label for="sd">SD</label>
+					<br/>
+					<input type="radio" name="quality" value="hd">
+					<label for="hd">HD</label>
+				</div>
+				<div class="option voice">
+					<h3><span>Voice</span></h3>
+					<input type="radio" checked="checked" name="voice" value="Ting-Ting">
+					<label for="male">Mandarin</label>  
+					<br/>
+					<input type="radio" name="voice" value="Sin-ji">
+					<label for="female" class="">Cantonese</label>
+					<br/>
+					<input type="radio" name="voice" value="Mei-Jia" >
+					<label for="robot" class="">Mandarin TW</label>
+				</div>
+				<div class="option speed">
+					<h3><span>Speed</span></h3>
+					<input type="radio" name="rate" value="fast" value="300">
+					<label for="fast">Fast</label>  
+					<br/>
+					<input type="radio" checked="checked" name="rate" value="220">
+					<label for="normal" class="">Normal</label>
+					<br/>
+					<input type="radio" name="rate" value="slow" value="180">
+					<label for="slow" class="disabled">Slow</label>
+				</div>
+				<div class="option auto">
+					<h3><span>On Complete</span></h3>
+					<input type="checkbox" name="download" value="download" disabled>
+					<label for="autodl">Start Download</label>
+				</div>
+			</div><!-- EDN .panel -->
+		</form>
+		
+		</div><!-- END .url-container -->
+		
+		<a href="#" class="options" id="options"></a>
+		
+		<div class="image-credit">
+			Image Credit: www.awaywithavery.com
+		</div>
+		
+	</div><!-- END #main -->
+
+
+	<footer>Prototype R1.13 (Dec 05, 2015)</footer>
+
+</div><!-- END #wrapper -->
+</body>
+</html>
