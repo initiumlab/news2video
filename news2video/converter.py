@@ -70,7 +70,7 @@ class Converter(object):
         seconds = sh.soxi('-D', filename)
         return seconds.strip()
 
-    def convert(self, url, fn_output):
+    def convert(self, url, fn_output, rate=220, voice='Ting-Ting'):
         # Download webpage
         res = requests.get(url)
         html = res.content.decode('utf-8')
@@ -109,7 +109,7 @@ class Converter(object):
             if r['type'] == 'text':
                 #commands.append('say --output-file={local_src}.m4a --voice=daniel --rate=220 --progress --file-format=m4af "{content}"'.format(**r))
                 #commands.append('say --output-file={local_src}.m4a -v Ting-Ting --rate=300 --progress --file-format=m4af "{content}"'.format(**r))
-                commands.append('say --output-file={local_src}.m4a -v Sin-ji --rate=200 --progress --file-format=m4af "{content}"'.format(**r))
+                commands.append('say --output-file={local_src}.m4a -v {voice} --rate={rate} --progress --file-format=m4af "{content}"'.format(rate=rate, voice=voice, **r))
         for (i, r) in df_screenplay.iterrows():
             if r['type'] == 'text':
                 commands.append('avconv -i {local_src}.m4a -y {local_src}.wav'.format(**r))
@@ -180,5 +180,13 @@ if __name__ == '__main__':
     import sys
     url = sys.argv[1]
     fn_output = sys.argv[2]
-    Converter().convert(url, fn_output)
+    if len(sys.argv) > 3:
+        rate = sys.argv[3]
+    else:
+        rate = 220
+    if len(sys.argv) > 4:
+        voice = sys.argv[4]
+    else:
+        voice = 'Ting-Ting'
+    Converter().convert(url, fn_output, rate, voice)
 
