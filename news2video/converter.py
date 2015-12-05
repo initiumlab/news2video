@@ -210,7 +210,8 @@ class Converter(object):
 
     def assemble_output(self, fn_output):
         open('playlist.txt', 'w').write('\n'.join(list(self.df_scenes['fn_video'].apply(lambda x: "file '%s'" % x))))
-        os.system('ffmpeg -f concat -i playlist.txt -c copy -y %s' % fn_output)
+        os.system('ffmpeg -f concat -i playlist.txt -c:v libx264 -c:a copy -y %s' % fn_output)
+        # ffmpeg -i output.mp4 -map 0 -c:v libx264 -c:a copy output-h264.mp4
 
     def convert(self, url, fn_output, rate=220, voice='Ting-Ting', screen_size='600x400!'):
         self.get_screen_play(url)
