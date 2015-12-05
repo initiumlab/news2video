@@ -5,3 +5,10 @@
 .coverage
 local_settings.py
 /static
+*.mp4
+*.mp3
+*.avi
+*.wav
+*.m4a
+*.jpg
+*.png
