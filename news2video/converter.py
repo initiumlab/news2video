@@ -263,7 +263,7 @@ class Converter(object):
             ''' % self.readable_title
         )
         os.system('ffmpeg -i subtitle.srt -y subtitle.ass')
-        os.system('ffmpeg -i _output.mp4 -vf ass=subtitle.ass -copyts -y %s' % fn_output)
+        os.system('ffmpeg -i _output.mp4 -vf ass=subtitle.ass -copyts -c:v libx264 -c:a copy -y %s' % fn_output)
 
 def main():
     import sys
