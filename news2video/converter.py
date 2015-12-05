@@ -217,9 +217,11 @@ class Converter(object):
         self.get_png_images()
         self.text_to_speech(rate, voice)
         self.organise_scenes()
+        self.prepare_default_assets()
         self.images_to_videos(screen_size)
         self.videos_add_audio()
         self.assemble_output(fn_output)
+
 
 def main():
     import sys
