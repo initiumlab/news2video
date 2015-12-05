@@ -8,6 +8,7 @@ import os
 from os import path
 import sh
 import multiprocessing
+import docopt
 
 
 class Extractor(object):
@@ -81,11 +82,14 @@ class Converter(object):
         seconds = sh.soxi('-D', filename)
         return seconds.strip()
 
-    def convert(self, url, fn_output, rate=220, voice='Ting-Ting', screen_size='600x400!'):
-        # Download webpage
+    def get_screen_play(self, url):
+        """Download webpage and analyze basic sequence
+
+        :param url:
+        :return:
+        """
         res = requests.get(url)
         html = res.content.decode('utf-8')
-
         # Analyze basic sequence
         readable_article = Document(html).summary()
         base_url = path.dirname(res.request.url)
@@ -102,42 +106,54 @@ class Converter(object):
         df_screenplay['download_name'] = df_screenplay['local_src'] + df_screenplay['extname']
         df_screenplay['converted_name'] = df_screenplay['local_src'] + '.png'
 
-        # Download images and convert to .png
+        self.df_screenplay = df_screenplay
+        return df_screenplay
 
+    def get_png_images(self):
+        """Download images and convert to .png
+        :return:
+        """
         commands = []
-        for (i, r) in df_screenplay.iterrows():
+        for (i, r) in self.df_screenplay.iterrows():
             if r['type'] == 'image':
                 commands.append('wget {content} -O {download_name}'.format(**r))
         self.execute_all(commands)
-
         commands = []
-        for (i, r) in df_screenplay.iterrows():
+        for (i, r) in self.df_screenplay.iterrows():
             if r['type'] == 'image':
                 commands.append('convert {download_name} {converted_name}'.format(**r))
         self.execute_all(commands)
 
-        # Generate audio via say (m4a) and convert to (wav)
+    def text_to_speech(self, rate, voice):
+        """ Generate audio via say (m4a) and convert to (wav)
+
+        :return:
+        """
         commands = []
-        for (i, r) in df_screenplay.iterrows():
+        for (i, r) in self.df_screenplay.iterrows():
             if r['type'] == 'text':
                 #commands.append('say --output-file={local_src}.m4a --voice=daniel --rate=220 --progress --file-format=m4af "{content}"'.format(**r))
                 #commands.append('say --output-file={local_src}.m4a -v Ting-Ting --rate=300 --progress --file-format=m4af "{content}"'.format(**r))
                 commands.append('say --output-file={local_src}.m4a -v {voice} --rate={rate} --progress --file-format=m4af "{content}"'.format(rate=rate, voice=voice, **r))
         self.execute_all(commands)
-
+        # Convert to .wav
         commands = []
-        for (i, r) in df_screenplay.iterrows():
+        for (i, r) in self.df_screenplay.iterrows():
             if r['type'] == 'text':
                 commands.append('avconv -i {local_src}.m4a -y {local_src}.wav'.format(**r))
         self.execute_all(commands)
-
         # Analyze audio duration
-        text_selector = (df_screenplay['type'] == 'text')
-        df_screenplay.loc[text_selector, 'duration'] = df_screenplay.loc[text_selector, 'local_src'].apply(self.get_audio_length)
+        text_selector = (self.df_screenplay['type'] == 'text')
+        self.df_screenplay.loc[text_selector, 'duration'] = self.df_screenplay.loc[text_selector, 'local_src'].apply(self.get_audio_length)
 
-        # Organise scenes
+    def organise_scenes(self):
+        """ Organise scenes
+        From:
+
+        :return:
+        """
         scenes = []
-        df_sp_orged = df_screenplay.reset_index()
+        df_sp_orged = self.df_screenplay.reset_index()
         # Group the sequence
         df_sp_orged['group'] = df_sp_orged['index'].apply(lambda x: int((x + 1) / 2))
         for (gname, group) in df_sp_orged.groupby('group'):
@@ -155,8 +171,6 @@ class Converter(object):
             scenes.append(('%04d' % gname, fn_image, duration, fn_audio))
         df_scenes = pd.DataFrame(scenes, columns=['group', 'fn_image', 'duration', 'fn_audio'])
 
-        # Final assemble of the video
-        os.system('cp -f default/* .')
         df_scenes['fn_video_only'] = 'group' + df_scenes['group'] + '.mp4'
         df_scenes['fn_video'] = 'group' + df_scenes['group'] + '-a.mp4'
         # Following was used to solve non integer fps problem the conflicts with stanrdard
@@ -164,34 +178,50 @@ class Converter(object):
         #df_scenes['duration'] = df_scenes['duration'].apply(lambda x: int(np.ceil(float(x))))
         df_scenes['fn_image_resized'] = 'resized-' + df_scenes['fn_image']
         df_scenes['fn_audio_only'] = 'group' + df_scenes['group'] + '-audio.m4a'
-
         # To avoid too short clips
         df_scenes = df_scenes[df_scenes['duration'].apply(lambda x: float(x) > 0.1)]
-        commands = []
-        for (i, r) in df_scenes.iterrows():
-            commands.append('cp {fn_audio} {fn_audio_only}'.format(**r))
-        self.execute_all(commands)
 
+        self.df_sp_orged = df_sp_orged
+        self.df_scenes = df_scenes
+
+    def prepare_default_assets(self):
+        os.system('cp -f default/* .')
+
+    def images_to_videos(self, screen_size):
         commands = []
-        for (i, r) in df_scenes.iterrows():
+        for (i, r) in self.df_scenes.iterrows():
             commands.append('convert {fn_image} -resize {screen_size} {fn_image_resized}'.format(screen_size=screen_size, **r))
         self.execute_all(commands)
-
         commands = []
-        for (i, r) in df_scenes.iterrows():
+        for (i, r) in self.df_scenes.iterrows():
             commands.append('ffmpeg -f image2 -r 1/{duration} -i {fn_image_resized} -qscale:v 1 -copyts -vcodec mpeg4 -y -r 25 {fn_video_only}'.format(**r))
         self.execute_all(commands)
 
+    def videos_add_audio(self):
         commands = []
-        for (i, r) in df_scenes.iterrows():
+        for (i, r) in self.df_scenes.iterrows():
+            commands.append('cp {fn_audio} {fn_audio_only}'.format(**r))
+        self.execute_all(commands)
+        commands = []
+        for (i, r) in self.df_scenes.iterrows():
             commands.append('ffmpeg -i {fn_video_only} -i {fn_audio} -qscale:v 1 -copyts -vcodec copy -acodec copy -y {fn_video}'.format(**r))
             #commands.append('ffmpeg -i {fn_video_only} -i {fn_audio} -map 0:0 -map 1 -vcodec copy -acodec copy -y {fn_video}'.format(**r))
         self.execute_all(commands)
 
-        open('playlist.txt', 'w').write('\n'.join(list(df_scenes['fn_video'].apply(lambda x: "file '%s'" % x))))
+    def assemble_output(self, fn_output):
+        open('playlist.txt', 'w').write('\n'.join(list(self.df_scenes['fn_video'].apply(lambda x: "file '%s'" % x))))
         os.system('ffmpeg -f concat -i playlist.txt -c copy -y %s' % fn_output)
 
-if __name__ == '__main__':
+    def convert(self, url, fn_output, rate=220, voice='Ting-Ting', screen_size='600x400!'):
+        self.get_screen_play(url)
+        self.get_png_images()
+        self.text_to_speech(rate, voice)
+        self.organise_scenes()
+        self.images_to_videos(screen_size)
+        self.videos_add_audio()
+        self.assemble_output(fn_output)
+
+def main():
     import sys
     url = sys.argv[1]
     fn_output = sys.argv[2]
@@ -209,3 +239,6 @@ if __name__ == '__main__':
         screen_size='600x400!'
     Converter().convert(url, fn_output, rate, voice, screen_size)
 
+
+if __name__ == '__main__':
+    main()
