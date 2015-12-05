@@ -399,7 +399,8 @@ module.exports = function (grunt) {
             'images/{,*/}*.{webp}',
             'styles/fonts/{,*/}*.*',
             'case1/**',
-            'genhk2015/**'
+            'genhk2015/**',
+            'post-gen-hk-2015-jmsc/**'
           ]
         }, {
           expand: true,
