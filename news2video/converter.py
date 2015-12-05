@@ -7,6 +7,7 @@ import hashlib
 import os
 from os import path
 import sh
+import multiprocessing
 
 
 class Extractor(object):
@@ -54,9 +55,19 @@ class Extractor(object):
         return self.result
 
 
+global_pool = None
+
 class Converter(object):
-    def __init__(self):
-        pass
+    def __init__(self, num_pools=4):
+        global global_pool
+        global_pool = multiprocessing.Pool(num_pools)
+
+    def execute(self, command):
+        return os.system(command)
+
+    def execute_all(self, commands):
+        global global_pool
+        return global_pool.map(self.execute, commands)
 
     def string2hash(self, s):
         m = hashlib.sha256()
@@ -93,15 +104,18 @@ class Converter(object):
 
 
         # Download images and convert to .png
+
         commands = []
         for (i, r) in df_screenplay.iterrows():
             if r['type'] == 'image':
                 commands.append('wget {content} -O {download_name}'.format(**r))
+        self.execute_all(commands)
+
+        commands = []
         for (i, r) in df_screenplay.iterrows():
             if r['type'] == 'image':
                 commands.append('convert {download_name} {converted_name}'.format(**r))
-        for c in commands:
-            os.system(c)
+        self.execute_all(commands)
 
         # Generate audio via say (m4a) and convert to (wav)
         commands = []
@@ -110,11 +124,13 @@ class Converter(object):
                 #commands.append('say --output-file={local_src}.m4a --voice=daniel --rate=220 --progress --file-format=m4af "{content}"'.format(**r))
                 #commands.append('say --output-file={local_src}.m4a -v Ting-Ting --rate=300 --progress --file-format=m4af "{content}"'.format(**r))
                 commands.append('say --output-file={local_src}.m4a -v {voice} --rate={rate} --progress --file-format=m4af "{content}"'.format(rate=rate, voice=voice, **r))
+        self.execute_all(commands)
+
+        commands = []
         for (i, r) in df_screenplay.iterrows():
             if r['type'] == 'text':
                 commands.append('avconv -i {local_src}.m4a -y {local_src}.wav'.format(**r))
-        for c in commands:
-            os.system(c)
+        self.execute_all(commands)
 
         # Analyze audio duration
         text_selector = (df_screenplay['type'] == 'text')
@@ -155,24 +171,24 @@ class Converter(object):
         commands = []
         for (i, r) in df_scenes.iterrows():
             commands.append('cp {fn_audio} {fn_audio_only}'.format(**r))
-        commands
-        for c in commands:
-            os.system(c)
-            commands = []
+        self.execute_all(commands)
+
+        commands = []
         for (i, r) in df_scenes.iterrows():
             commands.append('convert {fn_image} -resize 600x400! {fn_image_resized}'.format(**r))
-        print(commands)
-        for c in commands:
-            os.system(c)
+        self.execute_all(commands)
+
         commands = []
         for (i, r) in df_scenes.iterrows():
             commands.append('ffmpeg -f image2 -r 1/{duration} -i {fn_image_resized} -qscale:v 1 -copyts -vcodec mpeg4 -y -r 25 {fn_video_only}'.format(**r))
+        self.execute_all(commands)
+
+        commands = []
         for (i, r) in df_scenes.iterrows():
             commands.append('ffmpeg -i {fn_video_only} -i {fn_audio} -qscale:v 1 -copyts -vcodec copy -acodec copy -y {fn_video}'.format(**r))
             #commands.append('ffmpeg -i {fn_video_only} -i {fn_audio} -map 0:0 -map 1 -vcodec copy -acodec copy -y {fn_video}'.format(**r))
-        commands
-        for c in commands:
-            os.system(c)
+        self.execute_all(commands)
+
         open('playlist.txt', 'w').write('\n'.join(list(df_scenes['fn_video'].apply(lambda x: "file '%s'" % x))))
         os.system('ffmpeg -f concat -i playlist.txt -c copy -y %s' % fn_output)
 
