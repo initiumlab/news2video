@@ -92,7 +92,12 @@ class Converter(object):
         html = res.content.decode('utf-8')
         # Analyze basic sequence
         readable_article = Document(html).summary()
+        self.readable_article = readable_article
+        readable_title = Document(html).title()
+        self.readable_title = readable_title
+
         base_url = path.dirname(res.request.url)
+
         result = Extractor(base_url).html_to_asset_list(readable_article)
         #print(result)
         df_screenplay = pd.DataFrame(result, columns=['type', 'content'])
@@ -109,7 +114,7 @@ class Converter(object):
         self.df_screenplay = df_screenplay
         return df_screenplay
 
-    def get_png_images(self):
+    def get_png_images(self, screen_size):
         """Download images and convert to .png
         :return:
         """
@@ -121,7 +126,7 @@ class Converter(object):
         commands = []
         for (i, r) in self.df_screenplay.iterrows():
             if r['type'] == 'image':
-                commands.append('convert {download_name} {converted_name}'.format(**r))
+                commands.append('convert {download_name} -geometry {screen_size} {converted_name}'.format(screen_size=screen_size, **r))
         self.execute_all(commands)
 
     def text_to_speech(self, rate, voice):
@@ -187,10 +192,10 @@ class Converter(object):
     def prepare_default_assets(self):
         os.system('cp -f default/* .')
 
-    def images_to_videos(self, screen_size):
+    def images_to_videos(self):
         commands = []
         for (i, r) in self.df_scenes.iterrows():
-            commands.append('convert {fn_image} -resize {screen_size} {fn_image_resized}'.format(screen_size=screen_size, **r))
+            commands.append('convert {fn_image} {fn_image_resized}'.format(**r))
         self.execute_all(commands)
         commands = []
         for (i, r) in self.df_scenes.iterrows():
@@ -215,14 +220,50 @@ class Converter(object):
 
     def convert(self, url, fn_output, rate=220, voice='Ting-Ting', screen_size='600x400!'):
         self.get_screen_play(url)
-        self.get_png_images()
+        self.get_png_images(screen_size)
         self.text_to_speech(rate, voice)
         self.organise_scenes()
         self.prepare_default_assets()
-        self.images_to_videos(screen_size)
+        self.images_to_videos()
         self.videos_add_audio()
         self.assemble_output(fn_output)
 
+    def convert_digest(self, url, fn_output):
+        # url = 'https://theinitium.com/article/20151127-mainland-government-officials-suicide-map/'
+
+        #c.convert(url, 'out.mp4')
+        self.get_screen_play(url)
+
+        os.system(
+            'say --output-file=title.m4a -v Ting-Ting --rate=220 --progress --file-format=m4af "%s"' % self.readable_title
+        )
+        os.system(
+            'avconv -i title.m4a -y title.wav'
+        )
+        length = self.get_audio_length('title')
+
+        length = self.get_audio_length('title')
+
+        screen_size='600x400!'
+        self.get_png_images(screen_size)
+
+        df_images = self.df_screenplay[self.df_screenplay['type'] == 'image']
+        os.system('rm -f image*.png')
+        order=1
+        for (i, r) in df_images.iterrows():
+            os.system('cp %s image%02d.png' % (r['converted_name'], order))
+            order += 1
+
+        per_image_length = 1.0 * float(length) / len(df_images)
+        os.system('ffmpeg -f image2 -r 1/{length} -i image%02d.png -copyts -vcodec mpeg4 -r 25 -y movie.mp4'.format(length=per_image_length))
+        os.system('ffmpeg -i movie.mp4 -i title.m4a -copyts  -vcodec copy -acodec copy -y _output.mp4')
+
+        open('subtitle.srt', 'w').write(
+            '''[00:00.00] %s
+            ''' % self.readable_title
+        )
+        os.system('ffmpeg -i subtitle.srt -y subtitle.ass')
+        os.system('ffmpeg -i _output.mp4 -vf ass=subtitle.ass -copyts -y %s' % fn_output)
 
 def main():
     import sys
@@ -240,7 +281,8 @@ def main():
         screen_size = sys.argv[5]
     else:
         screen_size='600x400!'
-    Converter().convert(url, fn_output, rate, voice, screen_size)
+    #Converter().convert(url, fn_output, rate, voice, screen_size)
+    Converter().convert_digest(url, fn_output)
 
 
 if __name__ == '__main__':

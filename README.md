@@ -10,7 +10,7 @@
 On OS X, you can:
 
 ```
-brew install ffmpeg sox imagemagick libav
+brew install sox imagemagick libav libass ffmpeg
 ```
 
 ## Python 3
