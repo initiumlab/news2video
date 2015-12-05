@@ -81,7 +81,7 @@ class Converter(object):
         seconds = sh.soxi('-D', filename)
         return seconds.strip()
 
-    def convert(self, url, fn_output, rate=220, voice='Ting-Ting'):
+    def convert(self, url, fn_output, rate=220, voice='Ting-Ting', screen_size='600x400!'):
         # Download webpage
         res = requests.get(url)
         html = res.content.decode('utf-8')
@@ -101,7 +101,6 @@ class Converter(object):
         df_screenplay = df_screenplay.fillna('')
         df_screenplay['download_name'] = df_screenplay['local_src'] + df_screenplay['extname']
         df_screenplay['converted_name'] = df_screenplay['local_src'] + '.png'
-
 
         # Download images and convert to .png
 
@@ -175,7 +174,7 @@ class Converter(object):
 
         commands = []
         for (i, r) in df_scenes.iterrows():
-            commands.append('convert {fn_image} -resize 600x400! {fn_image_resized}'.format(**r))
+            commands.append('convert {fn_image} -resize {screen_size} {fn_image_resized}'.format(screen_size=screen_size, **r))
         self.execute_all(commands)
 
         commands = []
@@ -204,5 +203,9 @@ if __name__ == '__main__':
         voice = sys.argv[4]
     else:
         voice = 'Ting-Ting'
-    Converter().convert(url, fn_output, rate, voice)
+    if len(sys.argv) > 5:
+        screen_size = sys.argv[5]
+    else:
+        screen_size='600x400!'
+    Converter().convert(url, fn_output, rate, voice, screen_size)
 
