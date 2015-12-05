@@ -83,13 +83,13 @@
 			<label for="url"><strong>Please enter URL:</strong></label>
 			<input type="url" name="url" id="url" placeholder="http://" class="url-box">
 			<div class="pref">
-				<span class="digest">
-					<input type="radio" checked="checked" name="length" value="digest">
-					<label for="digest">Digest</label>
-				</span>
 				<span class="full">
-					<input type="radio" name="length" value="full">
+					<input type="radio" name="length" value="full" checked="checked">
 					<label for="full">Full Story</label>
+				</span>
+				<span class="digest">
+					<input type="radio" name="length" value="digest">
+					<label for="digest">Digest</label>
 				</span>
 			</div>
 			<button class="convert">
@@ -131,14 +131,14 @@
 				</div>
 				<div class="option speed">
 					<h3><span>Speed</span></h3>
-					<input type="radio" name="rate" value="fast" value="300">
+					<input type="radio" name="rate" value="300">
 					<label for="fast">Fast</label>  
 					<br/>
 					<input type="radio" checked="checked" name="rate" value="220">
 					<label for="normal" class="">Normal</label>
 					<br/>
-					<input type="radio" name="rate" value="slow" value="180">
-					<label for="slow" class="disabled">Slow</label>
+					<input type="radio" name="rate" value="180">
+					<label for="slow" class="">Slow</label>
 				</div>
 				<div class="option auto">
 					<h3><span>On Complete</span></h3>
