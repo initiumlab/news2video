@@ -126,7 +126,7 @@ class Converter(object):
         commands = []
         for (i, r) in self.df_screenplay.iterrows():
             if r['type'] == 'image':
-                commands.append('convert {download_name} -geometry {screen_size} {converted_name}'.format(screen_size=screen_size, **r))
+                commands.append('convert {download_name} -resize {screen_size} {converted_name}'.format(screen_size=screen_size, **r))
         self.execute_all(commands)
 
     def text_to_speech(self, rate, voice):
@@ -192,10 +192,10 @@ class Converter(object):
     def prepare_default_assets(self):
         os.system('cp -f default/* .')
 
-    def images_to_videos(self):
+    def images_to_videos(self, screen_size):
         commands = []
         for (i, r) in self.df_scenes.iterrows():
-            commands.append('convert {fn_image} {fn_image_resized}'.format(**r))
+            commands.append('convert {fn_image} -resize {screen_size} {fn_image_resized}'.format(screen_size=screen_size, **r))
         self.execute_all(commands)
         commands = []
         for (i, r) in self.df_scenes.iterrows():
@@ -224,7 +224,7 @@ class Converter(object):
         self.text_to_speech(rate, voice)
         self.organise_scenes()
         self.prepare_default_assets()
-        self.images_to_videos()
+        self.images_to_videos(screen_size)
         self.videos_add_audio()
         self.assemble_output(fn_output)
 
@@ -263,7 +263,7 @@ class Converter(object):
             ''' % self.readable_title
         )
         os.system('ffmpeg -i subtitle.srt -y subtitle.ass')
-        os.system('ffmpeg -i _output.mp4 -vf ass=subtitle.ass -copyts -y %s' % fn_output)
+        os.system('ffmpeg -i _output.mp4 -vf ass=subtitle.ass -copyts -c:v libx264 -c:a copy -y %s' % fn_output)
 
 def main():
     import sys
@@ -281,8 +281,8 @@ def main():
         screen_size = sys.argv[5]
     else:
         screen_size='600x400!'
-    #Converter().convert(url, fn_output, rate, voice, screen_size)
-    Converter().convert_digest(url, fn_output)
+    Converter().convert(url, fn_output, rate, voice, screen_size)
+    #Converter().convert_digest(url, fn_output)
 
 
 if __name__ == '__main__':

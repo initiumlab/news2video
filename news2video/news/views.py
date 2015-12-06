@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 # Create your views here.
 import json
 import hashlib
@@ -29,8 +30,8 @@ def convert(request):
             Converter().convert_digest(form['url'].data, fn_output)
         else:
             v = form['voice'].data or 'Ting-Ting'
-            r = form['rate'].data or 220
-            Converter().convert(form['url'].data, fn_output, voice=v, rate = r)
+            r = form['rate'].data or '220'
+            Converter().convert(form['url'].data, fn_output, voice=v, rate=r)
     else:
         pass
 

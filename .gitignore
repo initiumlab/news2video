@@ -4,3 +4,4 @@ venv
 .idea
 .grunt
 .ipynb_checkpoints
+*.swp
